@@ -2,7 +2,7 @@
 #define _LOOPBACK_H_
 
 #include <stdint.h>
-#ifdef WIZNET_DIR // only includes once it is in a B-series project
+#ifdef BSERIES_EN // only includes once it is in a B-series project
 #include "../../../../../../include/custom_cmd.h"
 #endif
 

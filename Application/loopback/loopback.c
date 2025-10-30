@@ -3,6 +3,7 @@
 #include "socket.h"
 #include "wizchip_conf.h"
 #include "stdlib.h"
+// #include <string.h> //< if you get an error on memset() you need string.h
 
 #if LOOPBACK_MODE == LOOPBACK_MAIN_NOBLCOK
 
@@ -51,6 +52,7 @@ uint8_t* msg_dual = "Dual IP mode";
 //   EDITED  //
 int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mode)
 {
+    #ifdef BSERIES_EN
     if(eeprom_write_enabled || eeprom_active) return 1; //< skips if performing eeprom action. Prevents EEPROM corruption. return 1 = no error
     int32_t ret;
     datasize_t sentsize=0;
@@ -186,6 +188,7 @@ int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mo
             break;
         }
     return 1;
+    #endif
 }
 
 int32_t loopback_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mode)
@@ -525,6 +528,7 @@ int32_t loopback_udps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_
                 _addrlen = addr_len;
             }
         }
+        #ifdef BSERIES_EN
         if(datalog_flag == 1) {
             ret = recvfrom(sn, buf, received_size, (uint8_t*)&destip, (uint16_t*)&destport, &addr_len);
             float converted_volts[NUM_CHANNELS], converted_amps[NUM_CHANNELS];
@@ -547,6 +551,7 @@ int32_t loopback_udps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_
             datalog_flag = 0; //< reset flag for next timer interrupt
             memset(buf, 0, sizeof(buf)); //< empties dummy message from buffer
         }
+        #endif
         break;
     case SOCK_CLOSED:
 
