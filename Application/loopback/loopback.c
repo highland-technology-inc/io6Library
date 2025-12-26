@@ -531,23 +531,24 @@ int32_t loopback_udps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_
         #ifdef BSERIES_EN
         if(datalog_flag == 1) {
             ret = recvfrom(sn, buf, received_size, (uint8_t*)&destip, (uint16_t*)&destport, &addr_len);
-            float converted_volts[NUM_CHANNELS], converted_amps[NUM_CHANNELS];
-            for(int i=0; i<NUM_CHANNELS; i++) {
-                converted_volts[i] = Fix2Float(measured_data[i].v);
-                converted_amps[i] = Fix2Float(measured_data[i].i);
-            }
-            send_datalog(_destip, _destport, _addrlen, 
-                "SN=%s\r\n"
-                "A: %0.3fV\t%0.4fA\r\n"
-                "B: %0.3fV\t%0.4fA\r\n" 
-                "C: %0.3fV\t%0.4fA\r\n"
-                "D: %0.3fV\t%0.4fA\r\n",
-                serial_number,
-                converted_volts[0], converted_amps[0],
-                converted_volts[1], converted_amps[1], 
-                converted_volts[2], converted_amps[2],
-                converted_volts[3], converted_amps[3]
-            );
+            // Datalog functionality disabled - measured_data removed from B960 module
+            // float converted_volts[NUM_CHANNELS], converted_amps[NUM_CHANNELS];
+            // for(int i=0; i<NUM_CHANNELS; i++) {
+            //     converted_volts[i] = Fix2Float(measured_data[i].v);
+            //     converted_amps[i] = Fix2Float(measured_data[i].i);
+            // }
+            // send_datalog(_destip, _destport, _addrlen, 
+            //     "SN=%s\\r\\n"
+            //     "A: %0.3fV\\t%0.4fA\\r\\n"
+            //     "B: %0.3fV\\t%0.4fA\\r\\n" 
+            //     "C: %0.3fV\\t%0.4fA\\r\\n"
+            //     "D: %0.3fV\\t%0.4fA\\r\\n",
+            //     serial_number,
+            //     converted_volts[0], converted_amps[0],
+            //     converted_volts[1], converted_amps[1], 
+            //     converted_volts[2], converted_amps[2],
+            //     converted_volts[3], converted_amps[3]
+            // );
             datalog_flag = 0; //< reset flag for next timer interrupt
             memset(buf, 0, sizeof(buf)); //< empties dummy message from buffer
         }
