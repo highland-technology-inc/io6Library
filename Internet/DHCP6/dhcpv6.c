@@ -45,8 +45,7 @@
 #include <stdio.h>
 #include <string.h>
 
-/* If you want to display debug & procssing message, Define _DHCP_DEBUG_ in dhcp.h */
-#define _DHCP6_DEBUG_
+/* If you want to display debug & procssing message, Define _DHCP_DEBUG_ in dhcp.h */ 
 #ifdef _DHCP6_DEBUG_
 #include <stdio.h>
 #endif
@@ -217,6 +216,7 @@ void AppendDhcpOption(uint8_t value)
  */
 void DumpDhcpOption(char *sMark)
 {
+#ifdef _DHCP6_DEBUG_
     unsigned i;
     printf("%20s => size=%02d,num=%02d : ", sMark, size, num);
     for (i = num2; i < num; i++)
@@ -224,6 +224,7 @@ void DumpDhcpOption(char *sMark)
         printf("%.2x ", pDHCPMSG.OPT[i]);
     }
     printf("\r\n");
+#endif
     num2 = num;
 }
 
