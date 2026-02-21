@@ -390,12 +390,19 @@ void send_DHCPv4_DISCOVER(void)
 	pDHCPv4MSG->OPT[k++] = 0;          // fill zero length of hostname
 	for(i = 0 ; HOST_NAMEv4[i] != 0; i++)
    	pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
+	/// @note WE WANT THE SERIAL NUMBER TO APPEND TO THE HOSTNAME RATHER THAN MAC
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
+	pDHCPv4MSG->OPT[k++] = serial_number[0];
+	pDHCPv4MSG->OPT[k++] = serial_number[1];
+	pDHCPv4MSG->OPT[k++] = serial_number[2];
+	pDHCPv4MSG->OPT[k++] = serial_number[3];
+	pDHCPv4MSG->OPT[k++] = serial_number[4];
+	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
@@ -492,12 +499,18 @@ void send_DHCPv4_REQUEST(void)
 	pDHCPv4MSG->OPT[k++] = 0; // length of hostname
 	for(i = 0 ; HOST_NAMEv4[i] != 0; i++)
    	pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
-	pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
+	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
+	pDHCPv4MSG->OPT[k++] = serial_number[0];
+	pDHCPv4MSG->OPT[k++] = serial_number[1];
+	pDHCPv4MSG->OPT[k++] = serial_number[2];
+	pDHCPv4MSG->OPT[k++] = serial_number[3];
+	pDHCPv4MSG->OPT[k++] = serial_number[4];
+	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
