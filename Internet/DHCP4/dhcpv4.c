@@ -222,7 +222,7 @@ uint8_t DHCPv4_CHADDR[6]; // DHCP Client MAC address.
 #ifndef DHCPV4_PRINT_HOSTNAME
 #define DHCPV4_PRINT_HOSTNAME 1
 #endif
-
+static uint8_t hostname_printed = 0;
 static void dhcpv4_print_built_hostname(void)
 {
 #if DHCPV4_PRINT_HOSTNAME
@@ -423,7 +423,11 @@ void send_DHCPv4_DISCOVER(void)
 	pDHCPv4MSG->OPT[k++] = serial_number[4];
 	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
-	dhcpv4_print_built_hostname();
+	// Print hostname only once during initialization
+	if(!hostname_printed) {
+		dhcpv4_print_built_hostname();
+		hostname_printed = 1;
+	}
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
 	pDHCPv4MSG->OPT[k++] = 0x06;	// length of request
@@ -532,7 +536,10 @@ void send_DHCPv4_REQUEST(void)
 	pDHCPv4MSG->OPT[k++] = serial_number[4];
 	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
-	dhcpv4_print_built_hostname();
+	if(hostname_printed<2) {
+		dhcpv4_print_built_hostname();
+		hostname_printed++;
+	}
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
 	pDHCPv4MSG->OPT[k++] = 0x08;

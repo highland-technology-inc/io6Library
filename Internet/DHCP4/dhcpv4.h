@@ -72,6 +72,7 @@ extern "C" {
 #define MAGIC_COOKIE             0x63825363  ///< You should not modify it number.
 
 #define DCHPV4_HOST_NAME           "B960-\0"
+extern uint8_t HOST_NAMEv4[];
 
 /*
  * @brief return value of @ref DHCPv4_run()
