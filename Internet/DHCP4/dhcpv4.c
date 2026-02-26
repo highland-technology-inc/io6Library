@@ -55,9 +55,10 @@
 
 /* If you want to display debug & processing message, Define _DHCPV4_DEBUG_ in dhcp.h */
 
-#ifdef _DHCPV4_DEBUG_
-   #include <stdio.h>
-#endif
+// #ifdef _DHCPV4_DEBUG_
+//    #include <stdio.h>
+// #endif
+#include <stdio.h>
 
 /* DHCP state machine. */
 #define STATE_DHCPV4_INIT          0        ///< Initialize
@@ -217,6 +218,24 @@ RIP_MSG* pDHCPv4MSG;      // Buffer pointer for DHCP processing
 uint8_t HOST_NAMEv4[] = DCHPV4_HOST_NAME;
 
 uint8_t DHCPv4_CHADDR[6]; // DHCP Client MAC address.
+
+#ifndef DHCPV4_PRINT_HOSTNAME
+#define DHCPV4_PRINT_HOSTNAME 1
+#endif
+
+static void dhcpv4_print_built_hostname(void)
+{
+#if DHCPV4_PRINT_HOSTNAME
+   char hostname[64];
+   snprintf(
+      hostname, sizeof(hostname),
+      "%s%c%c%c%c%c",
+      (const char*)HOST_NAMEv4,
+      serial_number[0], serial_number[1], serial_number[2], serial_number[3], serial_number[4]
+   );
+   printf("[DHCPv4] Hostname: %s\r\n", hostname);
+#endif
+}
 
 /* The default callback function */
 void default_ipv4_assign(void);
@@ -404,6 +423,7 @@ void send_DHCPv4_DISCOVER(void)
 	pDHCPv4MSG->OPT[k++] = serial_number[4];
 	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
+	dhcpv4_print_built_hostname();
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
 	pDHCPv4MSG->OPT[k++] = 0x06;	// length of request
@@ -512,6 +532,7 @@ void send_DHCPv4_REQUEST(void)
 	pDHCPv4MSG->OPT[k++] = serial_number[4];
 	pDHCPv4MSG->OPT[k++] = '\0';
 	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
+	dhcpv4_print_built_hostname();
 
 	pDHCPv4MSG->OPT[k++] = dhcpParamRequest;
 	pDHCPv4MSG->OPT[k++] = 0x08;
