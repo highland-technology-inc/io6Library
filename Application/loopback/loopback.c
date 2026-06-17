@@ -91,15 +91,25 @@ int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mo
             getsockopt(sn,SO_RECVBUF,&received_size); //! check value & size of RECV buffer
 
             if(received_size > 0){
-                if(received_size > DATA_BUF_SIZE) received_size = DATA_BUF_SIZE; //! if data is too big, truncate
-                ret = recv(sn, buf, received_size); //! recv data from peer connected to this socket
-                char* buf_copy = strdup(buf);
-                if(user_input_buffer == NULL && sizeof(buf_copy) > 0) {
-                    // copy_to_store(buf); //! copy the command to the user_input_buffer
-                    // copy_to_store(buf_copy); //! copy the command to the user_input_buffer
-                    process_commands(buf_copy); //! process the command
+                /// Mirror the USB read_to_process limit: reject any command line longer than the
+                /// shared MAX_BUFFER_SIZE instead of silently truncating it to DATA_BUF_SIZE.
+                bool cmd_too_long = (received_size > MAX_BUFFER_SIZE - 1);
+                if(received_size > DATA_BUF_SIZE) received_size = DATA_BUF_SIZE; //! if data is too big, truncate the recv
+                ret = recv(sn, buf, received_size); //! recv data from peer (also drains the socket RX buffer)
+                if(cmd_too_long) {
+                    // Discard the over-long line and notify the client, same as the USB path.
+                    format_and_send("\r\nERR; command too long (max %d chars), line discarded\r\n",
+                                    MAX_BUFFER_SIZE - 1);
+                    if(ret > 0) memset(buf, 0, (size_t)ret);
+                } else {
+                    char* buf_copy = strdup(buf);
+                    if(user_input_buffer == NULL && sizeof(buf_copy) > 0) {
+                        // copy_to_store(buf); //! copy the command to the user_input_buffer
+                        // copy_to_store(buf_copy); //! copy the command to the user_input_buffer
+                        process_commands(buf_copy); //! process the command
+                    }
+                    memset(buf, 0, strlen(buf)); //< should clear the buffer after it is copied. Unsure about size parameter
                 }
-                memset(buf, 0, strlen(buf)); //< should clear the buffer after it is copied. Unsure about size parameter
 
                 if(ret <= 0) return ret;      // check SOCKERR_BUSY & SOCKERR_XXX. For showing the occurrence of SOCKERR_BUSY.
                 received_size = (uint16_t) ret;
