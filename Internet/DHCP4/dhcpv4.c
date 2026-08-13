@@ -227,14 +227,46 @@ static void dhcpv4_print_built_hostname(void)
 {
 #if DHCPV4_PRINT_HOSTNAME
    char hostname[64];
+   /* Precision-bounded so a serial that fills its array without a terminator
+      cannot run off the end, and so no NUL is ever printed mid-string. */
    snprintf(
       hostname, sizeof(hostname),
-      "%s%c%c%c%c%c",
-      (const char*)HOST_NAMEv4,
-      serial_number[0], serial_number[1], serial_number[2], serial_number[3], serial_number[4]
+      "%.*s%.*s",
+      (int)sizeof(HOST_NAMEv4), (const char*)HOST_NAMEv4,
+      (int)sizeof(serial_number), serial_number
    );
    printf("[DHCPv4] Hostname: %s\r\n", hostname);
 #endif
+}
+
+/**
+ * @brief  Append DHCP option 12 (host name) as "<DCHPV4_HOST_NAME><serial>".
+ * @param  k  Current write index into pDHCPv4MSG->OPT.
+ * @return Updated write index, positioned just after the option.
+ * @note   RFC 2132 3.14 carries the name as raw bytes with no terminator, so no
+ *         NUL is copied into the value. The length byte is back-filled from what
+ *         was actually written rather than a fixed formula, so it stays correct
+ *         if either source string changes length. Both copies are bounded --
+ *         serial_number is not guaranteed to be terminated inside its array.
+ */
+static uint16_t dhcpv4_append_hostname_opt(uint16_t k)
+{
+   uint16_t len_idx;
+   uint16_t value_start;
+   uint16_t i;
+
+   pDHCPv4MSG->OPT[k++] = hostName;
+   len_idx = k++;          /* back-filled below, once the value length is known */
+   value_start = k;
+
+   for (i = 0; i < sizeof(HOST_NAMEv4) && HOST_NAMEv4[i] != '\0'; i++)
+      pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
+
+   for (i = 0; i < sizeof(serial_number) && serial_number[i] != '\0'; i++)
+      pDHCPv4MSG->OPT[k++] = (uint8_t)serial_number[i];
+
+   pDHCPv4MSG->OPT[len_idx] = (uint8_t)(k - value_start);
+   return k;
 }
 
 /* The default callback function */
@@ -404,25 +436,8 @@ void send_DHCPv4_DISCOVER(void)
 	pDHCPv4MSG->OPT[k++] = DHCPv4_CHADDR[4];
 	pDHCPv4MSG->OPT[k++] = DHCPv4_CHADDR[5];
 
-	// host name
-	pDHCPv4MSG->OPT[k++] = hostName;
-	pDHCPv4MSG->OPT[k++] = 0;          // fill zero length of hostname
-	for(i = 0 ; HOST_NAMEv4[i] != 0; i++)
-   	pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
 	/// @note WE WANT THE SERIAL NUMBER TO APPEND TO THE HOSTNAME RATHER THAN MAC
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
-	pDHCPv4MSG->OPT[k++] = serial_number[0];
-	pDHCPv4MSG->OPT[k++] = serial_number[1];
-	pDHCPv4MSG->OPT[k++] = serial_number[2];
-	pDHCPv4MSG->OPT[k++] = serial_number[3];
-	pDHCPv4MSG->OPT[k++] = serial_number[4];
-	pDHCPv4MSG->OPT[k++] = '\0';
-	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
+	k = dhcpv4_append_hostname_opt(k);
 	// Print hostname only once during initialization
 	if(!hostname_printed) {
 		dhcpv4_print_built_hostname();
@@ -518,24 +533,8 @@ void send_DHCPv4_REQUEST(void)
 		pDHCPv4MSG->OPT[k++] = DHCPV4_SIP[3];
 	}
 
-	// host name
-	pDHCPv4MSG->OPT[k++] = hostName;
-	pDHCPv4MSG->OPT[k++] = 0; // length of hostname
-	for(i = 0 ; HOST_NAMEv4[i] != 0; i++)
-   	pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[3]);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[4]);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5] >> 4);
-	// pDHCPv4MSG->OPT[k++] = NibbleToHex(DHCPv4_CHADDR[5]);
-	pDHCPv4MSG->OPT[k++] = serial_number[0];
-	pDHCPv4MSG->OPT[k++] = serial_number[1];
-	pDHCPv4MSG->OPT[k++] = serial_number[2];
-	pDHCPv4MSG->OPT[k++] = serial_number[3];
-	pDHCPv4MSG->OPT[k++] = serial_number[4];
-	pDHCPv4MSG->OPT[k++] = '\0';
-	pDHCPv4MSG->OPT[k - (i+6+1)] = i+6; // length of hostname
+	/// @note WE WANT THE SERIAL NUMBER TO APPEND TO THE HOSTNAME RATHER THAN MAC
+	k = dhcpv4_append_hostname_opt(k);
 	if(hostname_printed<2) {
 		dhcpv4_print_built_hostname();
 		hostname_printed++;
