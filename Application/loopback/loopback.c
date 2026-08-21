@@ -49,6 +49,42 @@ uint8_t* msg_dual = "Dual IP mode";
     
 }; */ /// \brief initialization of glob
 
+/// Resolve terminal line-editing bytes in a received command line, in place, the
+/// same way read_to_process() does for USB: Backspace (127 / '\b') and the Delete
+/// key (ESC '[' '3' '~') erase the preceding character. Other ESC '[' sequences
+/// (arrows, etc.) and stray ESC bytes are dropped so they never reach the parser.
+/// The client sends the whole line on Enter, so the edit byte and the character it
+/// erases are in the same buffer — one pass, no cross-packet state, nothing echoed.
+static void resolve_line_edits(char* s)
+{
+    if(s == NULL) return;
+    size_t w = 0; // write index into the edited line
+    for(size_t r = 0; s[r] != '\0'; r++) {
+        char ch = s[r];
+        if(ch == 127 || ch == '\b') {            // Backspace / DEL: erase previous char
+            if(w > 0) w--;
+        } else if(ch == 27) {                    // ESC
+            if(s[r + 1] == '[') {                // escape sequence: ESC '[' ... final byte
+                // The sequence's final byte is in '@'..'~'; walk to it.
+                size_t k = r + 2;
+                while(s[k] != '\0' && !(s[k] >= '@' && s[k] <= '~')) {
+                    k++;
+                }
+                // Delete key is exactly ESC '[' '3' '~' -> erase. Consume the whole
+                // sequence either way so arrows/others don't land in the buffer.
+                if(s[k] == '~' && k == r + 3 && s[r + 2] == '3') {
+                    if(w > 0) w--;
+                }
+                r = (s[k] == '\0') ? (k - 1) : k;
+            }
+            // bare ESC (no '['): drop it
+        } else {
+            s[w++] = ch;
+        }
+    }
+    s[w] = '\0';
+}
+
 //   EDITED  //
 int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mode)
 {
@@ -103,9 +139,14 @@ int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mo
                     if(ret > 0) memset(buf, 0, (size_t)ret);
                 } else {
                     char* buf_copy = strdup(buf);
+                    resolve_line_edits(buf_copy); //< apply Backspace/Delete before parsing
                     if(user_input_buffer == NULL && sizeof(buf_copy) > 0) {
                         // copy_to_store(buf); //! copy the command to the user_input_buffer
                         // copy_to_store(buf_copy); //! copy the command to the user_input_buffer
+                        // No device echo: the client sends the whole line on Enter, so the
+                        // device can't echo keystrokes live. Enable local echo in the TCP
+                        // console instead. resolve_line_edits() still applies Backspace/Delete
+                        // to whatever raw edit bytes a client does send.
                         process_commands(buf_copy); //! process the command
                     }
                     memset(buf, 0, strlen(buf)); //< should clear the buffer after it is copied. Unsure about size parameter
