@@ -156,6 +156,8 @@ void getDNSfromDHCPv4(uint8_t* ip);
  */
 uint32_t getDHCPv4Leasetime(void);
 
+void dhcpv4_print_built_hostname(void);
+
 #ifdef __cplusplus
 }
 #endif

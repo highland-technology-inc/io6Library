@@ -223,7 +223,7 @@ uint8_t DHCPv4_CHADDR[6]; // DHCP Client MAC address.
 #define DHCPV4_PRINT_HOSTNAME 1
 #endif
 static uint8_t hostname_printed = 0;
-static void dhcpv4_print_built_hostname(void)
+void dhcpv4_print_built_hostname(void)
 {
 #if DHCPV4_PRINT_HOSTNAME
    char hostname[64];
