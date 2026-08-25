@@ -139,15 +139,27 @@ int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mo
                     if(ret > 0) memset(buf, 0, (size_t)ret);
                 } else {
                     char* buf_copy = strdup(buf);
-                    resolve_line_edits(buf_copy); //< apply Backspace/Delete before parsing
-                    if(user_input_buffer == NULL && sizeof(buf_copy) > 0) {
-                        // copy_to_store(buf); //! copy the command to the user_input_buffer
-                        // copy_to_store(buf_copy); //! copy the command to the user_input_buffer
-                        // No device echo: the client sends the whole line on Enter, so the
-                        // device can't echo keystrokes live. Enable local echo in the TCP
-                        // console instead. resolve_line_edits() still applies Backspace/Delete
-                        // to whatever raw edit bytes a client does send.
-                        process_commands(buf_copy); //! process the command
+                    if(buf_copy == NULL) {
+                        format_and_send("\r\nERR; out of memory\r\n");
+                    } else {
+                        resolve_line_edits(buf_copy); //< apply Backspace/Delete before parsing
+                        //! @note The old guard also tested `sizeof(buf_copy) > 0`, which is
+                        //!       sizeof a pointer -- always 4, never a length. It gated nothing.
+                        if(user_input_buffer == NULL) {
+                            // copy_to_store(buf); //! copy the command to the user_input_buffer
+                            // copy_to_store(buf_copy); //! copy the command to the user_input_buffer
+                            // No device echo: the client sends the whole line on Enter, so the
+                            // device can't echo keystrokes live. Enable local echo in the TCP
+                            // console instead. resolve_line_edits() still applies Backspace/Delete
+                            // to whatever raw edit bytes a client does send.
+                            process_commands(buf_copy); //! process the command
+                        }
+                        //! Free on every path, including the one where a USB command was already
+                        //! pending and this line was dropped. process_commands() strdup()s its
+                        //! own copy and frees that one, so this allocation has no other owner:
+                        //! leaking it cost strlen(line)+1 bytes per TCP command line and panicked
+                        //! the board with "Out of memory" after a few thousand commands.
+                        free(buf_copy);
                     }
                     memset(buf, 0, strlen(buf)); //< should clear the buffer after it is copied. Unsure about size parameter
                 }
