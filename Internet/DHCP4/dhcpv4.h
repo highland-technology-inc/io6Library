@@ -74,6 +74,11 @@ extern "C" {
 #define DCHPV4_HOST_NAME           "B960-\0"
 extern uint8_t HOST_NAMEv4[];
 
+/** Longest name dhcpv4_build_hostname() can produce, terminator included.
+ *  model[5] + '-' + serial_number[5] + NUL = 12; 16 leaves headroom for either
+ *  CAL field to grow without silently truncating the name. */
+#define DHCPV4_HOSTNAME_MAX        16
+
 /*
  * @brief return value of @ref DHCPv4_run()
  */
@@ -155,6 +160,14 @@ void getDNSfromDHCPv4(uint8_t* ip);
  * @return unit 1s
  */
 uint32_t getDHCPv4Leasetime(void);
+
+/*
+ * @brief Build "<model>-<serial>" from the CAL table into @p out.
+ * @param out     Destination; always NUL-terminated when out_len > 0.
+ * @param out_len Size of out. DHCPV4_HOSTNAME_MAX holds the longest result.
+ * @return Characters written, not counting the terminator.
+ */
+uint16_t dhcpv4_build_hostname(char* out, uint16_t out_len);
 
 void dhcpv4_print_built_hostname(void);
 

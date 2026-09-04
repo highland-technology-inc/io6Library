@@ -223,49 +223,89 @@ uint8_t DHCPv4_CHADDR[6]; // DHCP Client MAC address.
 #define DHCPV4_PRINT_HOSTNAME 1
 #endif
 static uint8_t hostname_printed = 0;
+/* Append a CAL field to out[] at k, keeping only letters and digits. The fields
+   are fixed arrays that a full-width "cal w ..." leaves without a terminator, so
+   the copy is bounded by the array as well as by the NUL. Returns the new index. */
+static uint16_t append_cal_field(char* out, uint16_t out_len, uint16_t k,
+                                 const char* src, uint16_t src_len)
+{
+   uint16_t i;
+   char     c;
+
+   for(i = 0; i < src_len && (k + 1) < out_len && src[i] != '\0'; i++)
+   {
+      c = src[i];
+      if((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+         out[k++] = c;
+   }
+   return k;
+}
+
+/**
+ * @brief  Build the unit's hostname, "<model>-<serial>", from the CAL table.
+ * @param  out      Destination buffer; always NUL-terminated when out_len > 0.
+ * @param  out_len  Size of @p out. DHCPV4_HOSTNAME_MAX holds the longest result.
+ * @return Number of characters written, not counting the terminator.
+ * @note   The prefix is the CAL model field rather than a compile-time literal so
+ *         a B360 does not announce itself as a B960. Read at send time, so
+ *         "cal w model" applies on the next lease rather than needing a reboot.
+ */
+uint16_t dhcpv4_build_hostname(char* out, uint16_t out_len)
+{
+   uint16_t k;
+
+   if(out == NULL || out_len == 0) return 0;
+
+   k = append_cal_field(out, out_len, 0, model, sizeof(model));
+
+   /* An erased model field falls back to the compiled-in name. Its trailing '-'
+      is not a label character, so only the "B960" part survives the copy. */
+   if(k == 0)
+      k = append_cal_field(out, out_len, 0, (const char*)HOST_NAMEv4, sizeof(HOST_NAMEv4));
+
+   if((k + 1) < out_len) out[k++] = '-';
+   k = append_cal_field(out, out_len, k, serial_number, sizeof(serial_number));
+
+   /* An erased serial would otherwise leave a trailing '-', which RFC 1035 does
+      not allow to end a label. Better a bare model than an illegal name. */
+   if(k > 0 && out[k - 1] == '-') k--;
+
+   out[k] = '\0';
+   return k;
+}
+
 void dhcpv4_print_built_hostname(void)
 {
 #if DHCPV4_PRINT_HOSTNAME
-   char hostname[64];
-   /* Precision-bounded so a serial that fills its array without a terminator
-      cannot run off the end, and so no NUL is ever printed mid-string. */
-   snprintf(
-      hostname, sizeof(hostname),
-      "%.*s%.*s",
-      (int)sizeof(HOST_NAMEv4), (const char*)HOST_NAMEv4,
-      (int)sizeof(serial_number), serial_number
-   );
+   char hostname[DHCPV4_HOSTNAME_MAX];
+   dhcpv4_build_hostname(hostname, sizeof(hostname));
    printf("[DHCPv4] Hostname: %s\r\n", hostname);
 #endif
 }
 
 /**
- * @brief  Append DHCP option 12 (host name) as "<DCHPV4_HOST_NAME><serial>".
+ * @brief  Append DHCP option 12 (host name) as "<model>-<serial>" from the CAL table.
  * @param  k  Current write index into pDHCPv4MSG->OPT.
  * @return Updated write index, positioned just after the option.
- * @note   RFC 2132 3.14 carries the name as raw bytes with no terminator, so no
- *         NUL is copied into the value. The length byte is back-filled from what
- *         was actually written rather than a fixed formula, so it stays correct
- *         if either source string changes length. Both copies are bounded --
- *         serial_number is not guaranteed to be terminated inside its array.
+ * @note   RFC 2132 3.14 carries the name as raw bytes with no terminator, so the
+ *         NUL that dhcpv4_build_hostname() writes is not copied into the value.
+ *         The length byte comes from what the builder actually produced, so it
+ *         stays correct whatever the CAL fields hold.
  */
 static uint16_t dhcpv4_append_hostname_opt(uint16_t k)
 {
-   uint16_t len_idx;
-   uint16_t value_start;
+   char     hostname[DHCPV4_HOSTNAME_MAX];
+   uint16_t len;
    uint16_t i;
 
+   len = dhcpv4_build_hostname(hostname, sizeof(hostname));
+
    pDHCPv4MSG->OPT[k++] = hostName;
-   len_idx = k++;          /* back-filled below, once the value length is known */
-   value_start = k;
+   pDHCPv4MSG->OPT[k++] = (uint8_t)len;
 
-   for (i = 0; i < sizeof(HOST_NAMEv4) && HOST_NAMEv4[i] != '\0'; i++)
-      pDHCPv4MSG->OPT[k++] = HOST_NAMEv4[i];
+   for (i = 0; i < len; i++)
+      pDHCPv4MSG->OPT[k++] = (uint8_t)hostname[i];
 
-   for (i = 0; i < sizeof(serial_number) && serial_number[i] != '\0'; i++)
-      pDHCPv4MSG->OPT[k++] = (uint8_t)serial_number[i];
-
-   pDHCPv4MSG->OPT[len_idx] = (uint8_t)(k - value_start);
    return k;
 }
 
