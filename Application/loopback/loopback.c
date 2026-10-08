@@ -214,6 +214,11 @@ int32_t custom_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mo
                 #endif
             break;
         case SOCK_INIT : //! initialize socket
+            /// Keep-alive, so a peer lost to an unplugged cable or a crashed host times the
+            /// socket out to SOCK_CLOSED instead of holding the only CLI socket forever.
+            /// Armed by the chip after the first byte sent (W6100 Sn_KPALVTR).
+            arg_tmp8 = CUSTOM_TCPS_KEEPALIVE_5S;
+            setsockopt(sn, SO_KEEPALIVEAUTO, &arg_tmp8);
             if( (ret = listen(sn)) != SOCK_OK) return ret;
                     printf("%d:Listen, TCP server loopback, port [%d] as %s\r\n", sn, port, mode_msg);
             break;

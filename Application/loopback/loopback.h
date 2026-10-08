@@ -18,6 +18,11 @@
 	#define DATA_BUF_SIZE			2048
 #endif
 
+/* custom_tcps() keep-alive interval, in the chip's 5s units (W6100 Sn_KPALVTR). 2 = 10s. */
+#ifndef CUSTOM_TCPS_KEEPALIVE_5S
+	#define CUSTOM_TCPS_KEEPALIVE_5S	2
+#endif
+
 /* MUST BE DEFINED HERE TO BE SEEN BY wiznet_app.c */
 int32_t loopback_udps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mode);
 int32_t loopback_tcps(uint8_t sn, uint8_t* buf, uint16_t port, uint8_t loopback_mode);
